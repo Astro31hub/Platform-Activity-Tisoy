@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "./firebase";
 import {
   collection,
@@ -16,14 +16,17 @@ function App() {
   const [notes, setNotes]         = useState([]);
   const [loading, setLoading]     = useState(false);
   const [removing, setRemoving]   = useState(null);
+  
+  // Define collection outside or wrap in useMemo, but keeping it simple here
   const notesCollection = collection(db, "notes");
 
-  const fetchNotes = async () => {
+  // Wrapped in useCallback to prevent the function from "changing" on every render
+  const fetchNotes = useCallback(async () => {
     const data = await getDocs(notesCollection);
     setNotes(
       data.docs.map((d) => ({ ...d.data(), id: d.id }))
     );
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addNote = async () => {
     if (note.trim() === "") return;
@@ -51,7 +54,11 @@ function App() {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  useEffect(() => { fetchNotes(); }, []);
+  // The critical fix for Vercel deployment:
+  useEffect(() => { 
+    fetchNotes(); 
+    // eslint-disable-next-line
+  }, [fetchNotes]);
 
   return (
     <div className="app">
